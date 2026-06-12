@@ -55,12 +55,17 @@ export class MapsController {
     @CurrentUser() user: User,
     @Body('query') query: unknown,
     @Query('lang') lang?: string,
+    @Body('locationBias') locationBias?: { lat: number; lng: number; radius?: number },
   ): Promise<MapsSearchResult> {
     if (!query) {
       throw new HttpException({ error: 'Search query is required' }, 400);
     }
+    // Optional bias toward a coordinate (lat/lng[/radius]); improves foreign-region queries.
+    if (locationBias && !(Number.isFinite(locationBias.lat) && Number.isFinite(locationBias.lng))) {
+      throw new HttpException({ error: 'Invalid locationBias: lat and lng must be finite numbers' }, 400);
+    }
     try {
-      return await this.maps.search(user.id, query as string, lang);
+      return await this.maps.search(user.id, query as string, lang, locationBias);
     } catch (err: unknown) {
       console.error('Maps search error:', err);
       throw toHttpException(err, 'Search error', 500);
