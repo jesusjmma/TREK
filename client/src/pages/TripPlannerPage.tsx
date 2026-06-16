@@ -636,6 +636,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
               assignments={assignments}
               files={files}
               onAdd={() => { setEditingTransport(null); setShowTransportModal(true) }}
+              onImport={() => setShowBookingImport(true)}
+              bookingImportAvailable={bookingImportAvailable}
               onAirTrailImport={() => setShowAirTrailImport(true)}
               airTrailAvailable={airTrailAvailable}
               onEdit={(r) => { setEditingTransport(r); setShowTransportModal(true) }}
