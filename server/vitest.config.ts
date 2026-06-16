@@ -24,7 +24,11 @@ export default defineConfig({
     silent: false,
     reporters: ['verbose'],
     coverage: {
-      provider: 'v8',
+      // Vite 8 + Vitest 4 made the sourcemap-based `v8` provider under-report branch
+      // coverage on the SWC/decorator-transformed output (it dropped to ~68% even
+      // though every test passes). `istanbul` instruments the source directly, so
+      // coverage is measured independently of the transform pipeline.
+      provider: 'istanbul',
       reporter: ['lcov', 'text'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
