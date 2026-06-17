@@ -69,7 +69,7 @@ export default function VacayCalendar() {
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-14">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" style={{ paddingBottom: 'calc(var(--bottom-nav-h, 0px) + 80px)' }}>
         {Array.from({ length: 12 }, (_, i) => (
           <VacayMonthCard
             key={i}
@@ -89,8 +89,8 @@ export default function VacayCalendar() {
         ))}
       </div>
 
-      {/* Floating toolbar */}
-      <div className="sticky bottom-3 sm:bottom-4 mt-3 sm:mt-4 flex items-center justify-center z-30 px-2">
+      {/* Floating toolbar — lift above the mobile bottom nav (z-60). On desktop --bottom-nav-h is 0px. */}
+      <div className="sticky mt-3 sm:mt-4 flex items-center justify-center px-2" style={{ bottom: 'calc(var(--bottom-nav-h, 0px) + 12px)', zIndex: 61 }}>
         <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl border bg-surface-card border-edge" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
           <button
             onClick={() => setCompanyMode(false)}
