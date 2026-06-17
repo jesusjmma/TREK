@@ -18,6 +18,11 @@ function seedAdminAccount(db: Database.Database): void {
     const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number }).count;
     if (userCount > 0) return;
 
+    // Demo mode seeds its own admin (admin@trek.app, username 'admin') right after this.
+    // Creating a first-run admin here would grab username 'admin' first and make the demo
+    // seeder fail on the UNIQUE(username) constraint, leaving the demo user uncreated.
+    if (process.env.DEMO_MODE?.toLowerCase() === 'true') return;
+
     if (isOidcOnlyConfigured()) {
       console.log('');
       console.log('╔══════════════════════════════════════════════╗');
