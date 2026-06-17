@@ -84,6 +84,22 @@ const transportReservation = {
   metadata: JSON.stringify({ airline: 'Air Italia', flight_number: 'AI123', departure_airport: 'CDG', arrival_airport: 'FCO' }),
 } as any
 
+const multiLegFlight = {
+  id: 401,
+  title: 'Flight to Tokyo',
+  type: 'flight',
+  day_id: 10,
+  reservation_time: '2025-06-01T08:00:00',
+  confirmation_number: 'XYZ789',
+  metadata: JSON.stringify({
+    legs: [
+      { from: 'FRA', to: 'BER', airline: 'Lufthansa', flight_number: 'LH1' },
+      { from: 'BER', to: 'HND', airline: 'Lufthansa', flight_number: 'LH2' },
+    ],
+    departure_airport: 'FRA', arrival_airport: 'HND', airline: 'Lufthansa', flight_number: 'LH1',
+  }),
+} as any
+
 const richArgs = {
   trip: { id: 10, title: 'Italy Trip', description: 'Summer adventure', cover_image: '/uploads/cover.jpg' } as any,
   days: [dayWithPlaces],
@@ -196,6 +212,16 @@ describe('downloadTripPDF', () => {
     const iframe = getIframe()
     expect(iframe!.srcdoc).toContain('Flight to Rome')
     expect(iframe!.srcdoc).toContain('ABC123')
+    // Single-leg flight keeps its full-route subtitle.
+    expect(iframe!.srcdoc).toContain('Air Italia · AI123 · CDG → FCO')
+  })
+
+  it('FE-COMP-TRIPPDF-013b: renders every flight number for a multi-leg flight', async () => {
+    await downloadTripPDF({ ...richArgs, reservations: [multiLegFlight] })
+    const iframe = getIframe()
+    // One subtitle line per leg, each with its own flight number and segment route.
+    expect(iframe!.srcdoc).toContain('Lufthansa · LH1 · FRA → BER')
+    expect(iframe!.srcdoc).toContain('Lufthansa · LH2 · BER → HND')
   })
 
   it('FE-COMP-TRIPPDF-014: renders cover image when trip has cover_image', async () => {

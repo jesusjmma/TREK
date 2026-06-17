@@ -6,6 +6,7 @@ import { accommodationsApi, mapsApi } from '../../api/client'
 import type { Trip, Day, Place, Category, AssignmentsMap, DayNote } from '../../types'
 import { isDayInAccommodationRange, getDayOrder } from '../../utils/dayOrder'
 import { splitReservationDateTime } from '../../utils/formatters'
+import { getFlightLegs } from '../../utils/flightLegs'
 
 function renderLucideIcon(icon:LucideIcon, props = {}) {
   if (!_renderToStaticMarkup) return ''
@@ -215,17 +216,30 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
             const icon = reservationIconSvg(r.type)
             const color = RESERVATION_COLOR_MAP[r.type] || '#3b82f6'
             let subtitle = ''
+            // Flights render one subtitle line per leg (see below); everything else is a single line.
+            let subtitleLines: string[] = []
             if (r.type === 'flight') {
-              // Full route over all waypoints (FRA → BER → HND), falling back to the
-              // flat metadata pair for legacy single-leg flights without endpoints.
-              const stops = (r.endpoints || []).slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map(e => e.code || e.name)
-              const route = stops.length >= 2 ? stops.join(' → ') : (meta.departure_airport && meta.arrival_airport ? `${meta.departure_airport} → ${meta.arrival_airport}` : '')
-              subtitle = [meta.airline, meta.flight_number, route].filter(Boolean).join(' · ')
+              const legs = getFlightLegs(r)
+              if (legs.length > 1) {
+                // Multi-leg: one line per leg so every flight number + segment route is shown.
+                subtitleLines = legs.map(l =>
+                  [l.airline, l.flight_number,
+                   (l.from || l.to) ? [l.from, l.to].filter(Boolean).join(' → ') : '']
+                    .filter(Boolean).join(' · '))
+                  .filter(Boolean)
+              } else {
+                // Single-leg: full route over all waypoints (FRA → BER → HND), falling back to the
+                // flat metadata pair for legacy single-leg flights without endpoints.
+                const stops = (r.endpoints || []).slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map(e => e.code || e.name)
+                const route = stops.length >= 2 ? stops.join(' → ') : (meta.departure_airport && meta.arrival_airport ? `${meta.departure_airport} → ${meta.arrival_airport}` : '')
+                subtitle = [meta.airline, meta.flight_number, route].filter(Boolean).join(' · ')
+              }
             }
             else if (r.type === 'train') subtitle = [meta.train_number, meta.platform ? `Gl. ${meta.platform}` : '', meta.seat ? `Seat ${meta.seat}` : ''].filter(Boolean).join(' · ')
             else if (r.type === 'restaurant') subtitle = [meta.party_size ? `${meta.party_size} guests` : ''].filter(Boolean).join(' · ')
             else if (r.type === 'event') subtitle = [meta.venue].filter(Boolean).join(' · ')
             else if (r.type === 'tour') subtitle = [meta.operator].filter(Boolean).join(' · ')
+            if (subtitleLines.length === 0 && subtitle) subtitleLines = [subtitle]
             const locationLine = r.location || meta.location || ''
             const phase = pdfGetSpanPhase(r, day.id)
             const spanLabel = pdfGetSpanLabel(r, phase)
@@ -238,7 +252,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
                 <span class="note-icon">${icon}</span>
                 <div class="note-body">
                   <div class="note-text" style="font-weight: 600;">${titleHtml}${time ? ` <span style="color:#6b7280;font-weight:400;font-size:10px;">${time}</span>` : ''}</div>
-                  ${subtitle ? `<div class="note-time">${escHtml(subtitle)}</div>` : ''}
+                  ${subtitleLines.filter(Boolean).map(s => `<div class="note-time">${escHtml(s)}</div>`).join('')}
                   ${locationLine ? `<div class="note-time">${escHtml(locationLine)}</div>` : ''}
                   ${r.confirmation_number ? `<div class="note-time" style="font-size:9px;">Code: ${escHtml(r.confirmation_number)}</div>` : ''}
                 </div>
