@@ -18,6 +18,8 @@ import {
   Plane, Hotel, Utensils, Clock, RefreshCw, ArrowRightLeft, Calendar,
   LayoutGrid, List, Ticket, X,
 } from 'lucide-react'
+import { formatTime, splitReservationDateTime } from '../utils/formatters'
+import { useSettingsStore } from '../store/settingsStore'
 import '../styles/dashboard.css'
 
 const GRADIENTS = [
@@ -602,6 +604,7 @@ function UpcomingTool({ items, locale, onOpen }: {
   items: UpcomingReservation[]; locale: string; onOpen: (tripId: number) => void
 }): React.ReactElement {
   const { t } = useTranslation()
+  const timeFormat = useSettingsStore(s => s.settings.time_format)
   return (
     <div className="tool">
       <div className="tool-head">
@@ -612,10 +615,13 @@ function UpcomingTool({ items, locale, onOpen }: {
       ) : (
         <div className="upc-list">
           {items.map(r => {
-            const when = r.reservation_time || (r.day_date ? r.day_date + 'T00:00:00' : null)
-            const d = when ? new Date(when) : null
-            const dateStr = d ? splitDate(d.toISOString().slice(0, 10), locale) : null
-            const timeStr = r.reservation_time ? new Date(r.reservation_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : null
+            // Read the date/time straight from the stored string parts. Going through
+            // new Date(...).toISOString() reinterprets the naive local time as UTC and
+            // can roll the displayed day forward/back in non-UTC timezones.
+            const parsed = splitReservationDateTime(r.reservation_time)
+            const datePart = parsed.date || r.day_date || null
+            const dateStr = datePart ? splitDate(datePart, locale) : null
+            const timeStr = parsed.time ? formatTime(parsed.time, locale, timeFormat) : null
             const typeClass = RES_TYPE_CLASS[r.type] || 'other'
             return (
               <div className="upc-item" key={r.id} onClick={() => onOpen(r.trip_id)}>
